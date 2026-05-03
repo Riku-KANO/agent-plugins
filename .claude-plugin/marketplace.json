@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "personal-agents",
+  "description": "Personal collection of Claude Code plugins, skills, and slash commands",
+  "owner": {
+    "name": "Riku-KANO"
+  },
+  "plugins": [
+    {
+      "name": "hello-world",
+      "description": "Reference plugin demonstrating commands, skills, and agents.",
+      "source": "./plugins/hello-world",
+      "category": "example"
+    },
+    {
+      "name": "ideate",
+      "description": "/ideate — Plan前の要件定義を対話で引き出してドキュメント化する。",
+      "source": "./plugins/ideate",
+      "category": "productivity"
+    }
+  ]
+}

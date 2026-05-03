@@ -1,0 +1,8 @@
+{
+  "name": "hello-world",
+  "version": "0.1.0",
+  "description": "Reference plugin: /hello command + sample skill.",
+  "author": {
+    "name": "Riku-KANO"
+  }
+}

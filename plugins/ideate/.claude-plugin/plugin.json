@@ -1,0 +1,8 @@
+{
+  "name": "ideate",
+  "version": "0.1.0",
+  "description": "/ideate — Plan前の要件定義を対話で引き出してドキュメント化する。",
+  "author": {
+    "name": "Riku-KANO"
+  }
+}
