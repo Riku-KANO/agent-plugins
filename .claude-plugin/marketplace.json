@@ -17,6 +17,12 @@
       "description": "/ideate — Plan前の要件定義を対話で引き出してドキュメント化する。",
       "source": "./plugins/ideate",
       "category": "productivity"
+    },
+    {
+      "name": "skill-eval",
+      "description": "[alpha] /skill-eval — Claude Code skill の効果を Copilot SDK で A/B 検証する CI を生成する。",
+      "source": "./plugins/skill-eval",
+      "category": "development"
     }
   ]
 }

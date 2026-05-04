@@ -1,0 +1,8 @@
+{
+  "name": "skill-eval",
+  "version": "0.1.0-alpha.1",
+  "description": "[alpha] /skill-eval:setup で GitHub Actions を生成し、Copilot SDK で .claude/skills/* の A/B 効果検証を行う。",
+  "author": {
+    "name": "Riku-KANO"
+  }
+}
