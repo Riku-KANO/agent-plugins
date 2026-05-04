@@ -97,13 +97,42 @@ class Runner:
             done = asyncio.Event()
             collected: list[str] = []
             seen_event_types: list[str] = []
+            session_errors: list[str] = []
+
+            def _summarize_event(data) -> str:
+                """Stringify an event payload for diagnostic logging.
+
+                We avoid importing every concrete event class because the SDK
+                is in preview and class layouts can shift. We pull whatever
+                interesting attributes are present.
+                """
+                interesting = ("error", "message", "code", "reason", "detail",
+                               "details", "kind", "status")
+                bits = {}
+                for attr in interesting:
+                    if hasattr(data, attr):
+                        try:
+                            bits[attr] = repr(getattr(data, attr))
+                        except Exception:
+                            bits[attr] = "<unreadable>"
+                if not bits:
+                    # Fall back to vars() / repr()
+                    try:
+                        return repr(vars(data))[:500]
+                    except Exception:
+                        return repr(data)[:500]
+                return repr(bits)
 
             def on_event(event):
                 data = getattr(event, "data", event)
-                seen_event_types.append(type(data).__name__)
+                type_name = type(data).__name__
+                seen_event_types.append(type_name)
                 if isinstance(data, AssistantMessageData):
                     if data.content:
                         collected.append(data.content)
+                elif type_name == "SessionErrorData":
+                    # Defensive: capture any error info regardless of attribute shape.
+                    session_errors.append(_summarize_event(data))
                 elif isinstance(data, SessionIdleData):
                     done.set()
 
@@ -113,13 +142,22 @@ class Runner:
             result = "".join(collected).strip()
 
             if not result:
-                # Diagnostic so empty-transcript bugs are debuggable from CI logs.
-                # Most common cause: a permission kind was denied and the model
-                # gave up without emitting a final AssistantMessageData.
+                # Empty response — log enough diagnostic info that we can
+                # debug from CI logs alone (event mix + error payloads + any
+                # message history surfaced by the SDK).
                 event_counts = dict(Counter(seen_event_types))
+                err_summary = " | ".join(session_errors[:3]) if session_errors else "(no SessionErrorData captured)"
+                history_repr = "(get_messages unavailable)"
+                try:
+                    msgs = await session.get_messages()
+                    history_repr = f"{len(msgs)} message(s); first200={repr(msgs)[:300]}"
+                except Exception as e:
+                    history_repr = f"(get_messages raised {type(e).__name__}: {e})"
                 print(
                     f"[copilot_runner] empty response from session "
-                    f"(model={self.model}, events={event_counts})",
+                    f"(model={self.model}, events={event_counts})\n"
+                    f"  session_errors: {err_summary}\n"
+                    f"  history: {history_repr}",
                     file=sys.stderr,
                     flush=True,
                 )
