@@ -70,7 +70,11 @@ jobs:
       - uses: actions/setup-python@v5
         if: steps.cmd.outputs.matched == 'true'
         with:
-          python-version: '3.14'
+          # Pinned to 3.11 to match skill-eval-sample's known-working config.
+          # github-copilot-sdk v0.3.0 is in public preview and has shown
+          # SessionErrorData on every session under Python 3.14 in this repo.
+          # Bump cautiously after confirming SDK compat.
+          python-version: '3.11'
 
       - uses: actions/setup-node@v6
         if: steps.cmd.outputs.matched == 'true'
