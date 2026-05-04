@@ -1,0 +1,219 @@
+name: skill-eval
+
+# Trigger: a maintainer comments `/skill-eval` on a PR.
+#
+# Security model:
+#   - This workflow runs the *default branch* version of skill-eval-scripts/.
+#     The PR head is consumed only as data (file contents fetched via `gh api`),
+#     never executed. Modifying skill-eval-scripts/ in a PR cannot affect this run.
+#   - `permissions: contents: write` is required to commit reports back to the
+#     PR branch. That is safe because no PR-controlled code runs in this job.
+on:
+  issue_comment:
+    types: [created]
+
+# Prevent two runs on the same PR from racing on the persist step.
+concurrency:
+  group: skill-eval-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+env:
+  OUT_DIR: skill-eval-out
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  skill-eval:
+    if: |
+      github.event.issue.pull_request != null &&
+      startsWith(github.event.comment.body, '/skill-eval')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write          # commit reports to the PR branch
+      pull-requests: write     # required by `gh pr comment`
+      issues: write
+
+    steps:
+      - name: Strict command match
+        id: cmd
+        env:
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          if [[ "$BODY" =~ ^/skill-eval([[:space:]]|$) ]]; then
+            echo "matched=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "matched=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping: comment did not match /skill-eval exactly."
+            exit 0
+          fi
+
+      - name: Verify commenter has write access
+        if: steps.cmd.outputs.matched == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: perm } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: context.payload.comment.user.login,
+            });
+            if (!['admin', 'write'].includes(perm.permission)) {
+              core.setFailed(`Commenter @${context.payload.comment.user.login} lacks write permission`);
+            }
+
+      - name: Checkout DEFAULT branch (trusted code)
+        if: steps.cmd.outputs.matched == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        if: steps.cmd.outputs.matched == 'true'
+        with:
+          python-version: '3.14'
+
+      - uses: actions/setup-node@v6
+        if: steps.cmd.outputs.matched == 'true'
+        with:
+          node-version: '24'
+
+      - name: Install Copilot CLI
+        if: steps.cmd.outputs.matched == 'true'
+        run: npm install -g @github/copilot
+
+      - name: Install Python dependencies
+        if: steps.cmd.outputs.matched == 'true'
+        run: pip install -r skill-eval-scripts/requirements.txt
+
+      - name: Resolve PR metadata
+        id: pr
+        if: steps.cmd.outputs.matched == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.issue.number }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          gh pr view "$PR" \
+            --json baseRefName,baseRefOid,headRefName,headRefOid,headRepository \
+            > pr-meta.json
+          {
+            echo "head_sha=$(jq -r .headRefOid pr-meta.json)"
+            echo "head_ref=$(jq -r .headRefName pr-meta.json)"
+            echo "base_ref=$(jq -r .baseRefName pr-meta.json)"
+            echo "base_sha=$(jq -r .baseRefOid pr-meta.json)"
+            head_owner=$(jq -r .headRepository.owner.login pr-meta.json)
+            if [ "$head_owner" = "$REPO_OWNER" ]; then
+              echo "is_fork=false"
+            else
+              echo "is_fork=true"
+            fi
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Collect PR file changes
+        if: steps.cmd.outputs.matched == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.issue.number }}
+        run: |
+          gh api "repos/${{ github.repository }}/pulls/$PR/files?per_page=100" \
+            --paginate --slurp > pr-files.json
+
+      - name: Fetch PR-head scenarios into trusted workspace
+        # Scenarios are *data* (JSON) not code, so we fetch them from the PR
+        # head into the default-branch checkout. This lets the eval reflect
+        # scenarios added in the PR itself.
+        #
+        # Layout: .claude/skills/<skill>/skill-eval/scenarios.json — one file
+        # per skill, co-located with SKILL.md. We iterate over changed
+        # SKILL.md paths (from pr-files.json) and fetch the matching
+        # scenarios.json from the PR head when present.
+        if: steps.cmd.outputs.matched == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Flatten pr-files.json (it may be array-of-arrays or flat) and
+          # extract changed SKILL.md paths.
+          jq -r '
+            (if type=="array" and (.[0]|type)=="array" then [.[][]] else . end)
+            | .[].filename
+            | select(test("^\\.claude/skills/[^/]+/SKILL\\.md$"))
+          ' pr-files.json | sort -u | while read -r skill_md; do
+            scenarios_path="${skill_md%/SKILL.md}/skill-eval/scenarios.json"
+            response=$(gh api "repos/${{ github.repository }}/contents/$scenarios_path?ref=${{ steps.pr.outputs.head_sha }}" 2>/dev/null || true)
+            if [ -n "$response" ] && echo "$response" | jq -e '.content' >/dev/null 2>&1; then
+              mkdir -p "$(dirname "$scenarios_path")"
+              echo "$response" | jq -r '.content' | base64 -d > "$scenarios_path"
+              echo "fetched $scenarios_path"
+            else
+              echo "no scenarios at $scenarios_path (will be reported as missing)"
+            fi
+          done
+
+      - name: Run skill eval (trusted orchestrator)
+        if: steps.cmd.outputs.matched == 'true'
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o pipefail
+          mkdir -p "$OUT_DIR/reports"
+          python skill-eval-scripts/skill_eval.py \
+            --pr "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --head-sha "${{ steps.pr.outputs.head_sha }}" \
+            --base-sha "${{ steps.pr.outputs.base_sha }}" \
+            --pr-files pr-files.json \
+            --reports-dir "$OUT_DIR/reports" \
+            --pr-comment-out "$OUT_DIR/pr-comment.md" \
+            2>&1 | tee "$OUT_DIR/orchestrator.log"
+
+      - name: Post PR summary comment
+        if: steps.cmd.outputs.matched == 'true' && always() && hashFiles(format('{0}/pr-comment.md', env.OUT_DIR)) != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ github.event.issue.number }}" \
+            --body-file "$OUT_DIR/pr-comment.md"
+
+      - name: Persist reports to PR branch
+        id: persist
+        if: |
+          steps.cmd.outputs.matched == 'true' &&
+          steps.pr.outputs.is_fork != 'true' &&
+          hashFiles(format('{0}/reports/**', env.OUT_DIR)) != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ steps.pr.outputs.head_ref }}
+          PR: ${{ github.event.issue.number }}
+        run: |
+          STAGE=$(mktemp -d)
+          cp -r "$OUT_DIR/reports/." "$STAGE/"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$HEAD_REF":pr-head
+          git checkout pr-head
+          mkdir -p .skill-eval/reports
+          cp -r "$STAGE/." .skill-eval/reports/
+          git add .skill-eval/reports/
+          if git diff --cached --quiet; then
+            echo "no changes to commit"
+            exit 0
+          fi
+          git commit -m "skill-eval: PR #$PR の結果 [skip ci]"
+          git push origin "pr-head:$HEAD_REF"
+
+      - name: Upload reports + orchestrator log as artifact
+        if: steps.cmd.outputs.matched == 'true' && always() && hashFiles(format('{0}/**', env.OUT_DIR)) != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-eval-pr${{ github.event.issue.number }}
+          path: ${{ env.OUT_DIR }}/
+
+      - name: Post failure comment
+        if: steps.cmd.outputs.matched == 'true' && failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ github.event.issue.number }}" \
+            --body "❌ skill-eval が失敗しました。詳細は [実行ログ](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) と \`skill-eval-pr${{ github.event.issue.number }}\` アーティファクト (orchestrator.log を含む) を確認してください。"

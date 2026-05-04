@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "skill-eval scenario file",
+  "type": "object",
+  "required": ["skill", "skill_path", "scenarios"],
+  "properties": {
+    "skill": {
+      "type": "string",
+      "description": "Skill name — must match the directory name under .claude/skills/"
+    },
+    "skill_path": {
+      "type": "string",
+      "description": "Path to SKILL.md, e.g. .claude/skills/<name>/SKILL.md"
+    },
+    "created_via": {
+      "type": "string",
+      "enum": ["interview", "manual"],
+      "description": "How this file was authored. Set to 'interview' when produced by /skill-eval:create-test."
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "archetype", "expectation", "user_prompt", "success_criteria", "skill_relevance"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable identifier within this file (e.g. s1, s2)."
+          },
+          "archetype": {
+            "type": "string",
+            "enum": ["direct", "adjacent", "subtle"],
+            "description": "Difficulty hint. direct = clearly the skill's domain; adjacent = borderline; subtle = nuanced/easy-to-miss. Informational; does not change scoring rigor."
+          },
+          "expectation": {
+            "type": "string",
+            "enum": ["should_fire", "should_not_fire"],
+            "default": "should_fire",
+            "description": "should_fire: this user_prompt MUST cause the skill to engage (trigger + apply). should_not_fire: this user_prompt MUST NOT engage the skill — it is a negative/decoy case to verify the skill does not over-trigger."
+          },
+          "user_prompt": {
+            "type": "string",
+            "description": "Verbatim user message sent to Copilot for both arms."
+          },
+          "success_criteria": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" },
+            "description": "Observable bullets used by the evaluator's `success` axis. For should_fire scenarios, describe what a skill-engaged response should contain. For should_not_fire scenarios, describe what a correct non-skill response should look like (e.g. 'responds without invoking <skill>-specific structure', 'treats the request as off-topic for this skill')."
+          },
+          "skill_relevance": {
+            "type": "string",
+            "description": "One sentence: which aspect of the skill this scenario exercises (or, for should_not_fire, why the skill MUST NOT engage). The evaluator uses this to ground the `skill_engagement` axis."
+          }
+        }
+      }
+    }
+  }
+}
