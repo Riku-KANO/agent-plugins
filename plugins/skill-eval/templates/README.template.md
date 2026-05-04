@@ -54,9 +54,18 @@ GitHub > Settings > Secrets and variables > Actions > New repository secret:
 
 | Name | Value |
 |---|---|
-| `COPILOT_GITHUB_TOKEN` | fine-grained PAT (`Copilot: Read` 権限スコープ) |
+| `COPILOT_GITHUB_TOKEN` | **fine-grained** PAT (`github_pat_...`)。Account permissions → `Copilot Requests` (Access/Read) |
 
-PAT は **Copilot 有料シートを保有するアカウント** で発行する必要があります (Free/Pro/Business/Enterprise いずれか)。`GITHUB_TOKEN` だけでは Copilot 推論が呼べません。
+### 重要な注意点
+
+- **必ず fine-grained PAT** を使うこと。classic PAT (`ghp_...`) は silently 無視されて「Authorization error」を出します
+- **Resource owner は個人アカウント** にすること。組織所有の fine-grained PAT には `Copilot Requests` パーミッションが表示されません ([copilot-cli#223](https://github.com/github/copilot-cli/issues/223))
+- 権限名は **`Copilot Requests`** (Account permissions タブ)。「Copilot: Read」「Copilot Chat」等の似た名前のスコープは別物
+- アクティブな Copilot subscription (Free / Pro / Business / Enterprise いずれか) が必要。`GITHUB_TOKEN` だけでは Copilot 推論を呼べません
+
+トークン作成: https://github.com/settings/personal-access-tokens/new
+
+参考: [Authenticating with Copilot SDK (GitHub Docs)](https://docs.github.com/en/copilot/how-tos/copilot-sdk/authenticate-copilot-sdk/authenticate-copilot-sdk)
 
 ### 2. シナリオ作成
 

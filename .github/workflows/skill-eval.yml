@@ -153,6 +153,26 @@ jobs:
             fi
           done
 
+      - name: Diagnose Copilot token
+        # Classifies COPILOT_GITHUB_TOKEN by its public prefix without
+        # printing the secret. Helps debug "Authorization error" issues
+        # from CI logs alone — the most common cause is a classic PAT
+        # (ghp_) being silently ignored by the Copilot SDK.
+        if: steps.cmd.outputs.matched == 'true'
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+            echo "::error::COPILOT_GITHUB_TOKEN secret is not set."
+            exit 1
+          fi
+          case "$COPILOT_GITHUB_TOKEN" in
+            github_pat_*) echo "token type: fine-grained PAT (expected)" ;;
+            ghp_*)        echo "::error::Classic PAT (ghp_) is silently ignored by Copilot SDK. Re-create as fine-grained PAT with Account → 'Copilot Requests' permission and update the secret." ; exit 1 ;;
+            github_token_*|ghs_*|gho_*) echo "::warning::Token looks like a built-in/OAuth token, not a PAT. Copilot SDK expects a fine-grained PAT (github_pat_)." ;;
+            *)            echo "::warning::Unrecognized token format. Expected fine-grained PAT (github_pat_)." ;;
+          esac
+
       - name: Run skill eval (trusted orchestrator)
         if: steps.cmd.outputs.matched == 'true'
         env:

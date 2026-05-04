@@ -18,7 +18,7 @@
 
 ```
 /skill-eval:setup                  # 1回だけ。ファイルを展開
-# → COPILOT_GITHUB_TOKEN secret を追加 (Copilot 有料シート + Copilot:Read PAT)
+# → COPILOT_GITHUB_TOKEN secret を追加 (Copilot subscription + fine-grained PAT with "Copilot Requests" 権限)
 /skill-eval:create-test <skill>    # シナリオ作成 (3〜5シナリオを対話で)
 git commit && git push             # PR を作成
 # PR コメントに "/skill-eval" と書くと CI 起動
@@ -32,7 +32,7 @@ git commit && git push             # PR を作成
 ## 動作要件
 
 - 消費側リポジトリが GitHub 上にあり、PR ベースで運用されている
-- **Copilot 有料シート** を持つアカウントの fine-grained PAT (`Copilot: Read` スコープ)
+- **Copilot subscription** (Free / Pro / Business / Enterprise いずれか可) を持つ個人アカウントの **fine-grained PAT** (Account permissions → `Copilot Requests`)
 - `.claude/skills/<name>/SKILL.md` が存在するか、PR で追加・修正される
 
 ## 保存場所
