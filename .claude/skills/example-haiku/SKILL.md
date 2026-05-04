@@ -19,6 +19,20 @@ Always:
 - **No preamble** ("Here's a haiku:") and **no postamble** ("I hope you enjoyed it!").
 - Match the language of the user's request: English request → English haiku, Japanese request → Japanese haiku.
 - Reflect the user's topic in **concrete imagery**, not abstract description.
+- **Anchor the poem in time with a kigo (季語) — a seasonal reference.** A defining trait of haiku is its anchoring in a specific moment. Pick a season that fits the topic (or the user's emotional tone if no topic is given) and let it surface through concrete sensory imagery.
+
+## Kigo guidance
+
+If the user's topic implies a season, surface it through concrete imagery rather than naming the season:
+
+| Topic / mood | Implicit kigo direction |
+|---|---|
+| coffee, hot drinks, mornings | winter chill, breath, steam |
+| ocean, fireworks, festivals | summer, cicadas, evening cool |
+| commute, change, restlessness | autumn winds, falling leaves |
+| beginnings, hope, deadlines | spring rain, new green, blossoms |
+
+When no topic is supplied (e.g. "俳句を作って"), choose a season that resonates with the time of day or the user's apparent mood and proceed.
 
 ## Examples
 
