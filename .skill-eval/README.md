@@ -14,12 +14,35 @@
 
 .skill-eval/
 ├── README.md                           # このファイル
+├── .version                            # インストール済みプラグイン版数 (自動管理)
 ├── scenario.schema.json                # scenarios.json の JSON スキーマ
+├── scripts/                            # Python ランナー (CI が実行)
 └── reports/<skill>/*.md                # CI が書き戻すレポート
 
-skill-eval-scripts/                     # Python ランナー (CI が実行)
 .github/workflows/skill-eval.yml
 ```
+
+## プラグインのアップグレード
+
+新しいバージョンの skill-eval をインストールしたら、消費側リポジトリでも `/skill-eval:setup` を再実行してください。setup スクリプトは `.skill-eval/.version` で現在のインストール済みバージョンを記録しており、プラグイン側のバージョンと差分があれば「upgrade detected: 旧→新」と表示します。
+
+```bash
+/skill-eval:setup           # まず差分を検出 (上書きはせず exit 1)
+# 出力に upgrade detected: 0.1.0-alpha.1 → 0.1.0-alpha.2 等が表示される
+/skill-eval:setup --force   # 安全に移行
+```
+
+`--force` 時に消されるもの (= プラグイン管理の vendor ファイル):
+
+- `.skill-eval/scripts/` 配下の Python ランナー (古いファイルが残らないよう完全に再生成)
+- 旧バージョンのレガシーパス (例: 旧レイアウトの `skill-eval-scripts/`)
+- `.skill-eval/{README.md, scenario.schema.json}` (テンプレートで再生成)
+- `.github/workflows/skill-eval.yml` (テンプレートで再生成)
+
+`--force` でも **消されない** もの (= ユーザーデータ):
+
+- `.claude/skills/<skill>/skill-eval/scenarios.json` (シナリオ)
+- `.skill-eval/reports/<skill>/*.md` (CI が蓄積したレポート履歴)
 
 シナリオは検証対象の skill 自身のディレクトリに `skill-eval/scenarios.json` として置きます。skill 改修と同じ PR でシナリオも修正でき、レビューしやすくなります。
 
@@ -31,9 +54,18 @@ GitHub > Settings > Secrets and variables > Actions > New repository secret:
 
 | Name | Value |
 |---|---|
-| `COPILOT_GITHUB_TOKEN` | fine-grained PAT (`Copilot: Read` 権限スコープ) |
+| `COPILOT_GITHUB_TOKEN` | **fine-grained** PAT (`github_pat_...`)。Account permissions → `Copilot Requests` (Access/Read) |
 
-PAT は **Copilot 有料シートを保有するアカウント** で発行する必要があります (Free/Pro/Business/Enterprise いずれか)。`GITHUB_TOKEN` だけでは Copilot 推論が呼べません。
+### 重要な注意点
+
+- **必ず fine-grained PAT** を使うこと。classic PAT (`ghp_...`) は silently 無視されて「Authorization error」を出します
+- **Resource owner は個人アカウント** にすること。組織所有の fine-grained PAT には `Copilot Requests` パーミッションが表示されません ([copilot-cli#223](https://github.com/github/copilot-cli/issues/223))
+- 権限名は **`Copilot Requests`** (Account permissions タブ)。「Copilot: Read」「Copilot Chat」等の似た名前のスコープは別物
+- アクティブな Copilot subscription (Free / Pro / Business / Enterprise いずれか) が必要。`GITHUB_TOKEN` だけでは Copilot 推論を呼べません
+
+トークン作成: https://github.com/settings/personal-access-tokens/new
+
+参考: [Authenticating with Copilot SDK (GitHub Docs)](https://docs.github.com/en/copilot/how-tos/copilot-sdk/authenticate-copilot-sdk/authenticate-copilot-sdk)
 
 ### 2. シナリオ作成
 
@@ -121,6 +153,6 @@ skill を変更する PR を作成し、PR コメントに `/skill-eval` と書�
 
 ## 既知の制限
 
-- **Copilot SDK は public preview** (v0.3.0)。SDK 破壊変更時は `skill-eval-scripts/copilot_runner.py` の更新が必要
+- **Copilot SDK は public preview** (v0.3.0)。SDK 破壊変更時は `.skill-eval/scripts/copilot_runner.py` の更新が必要
 - **シナリオはユーザー作成**。skill 改修時にシナリオも更新しないと検証品質が落ちます
 - 実装は alpha (`0.1.0-alpha.1`)。フィードバック・バグ報告は marketplace 元 (`personal-agents`) のリポジトリへ

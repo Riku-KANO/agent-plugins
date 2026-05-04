@@ -37,8 +37,12 @@ skill-eval プラグインのセットアップを実行する。これは消費
    >
    > 次のステップ：
    > 1. リポジトリ secret に `COPILOT_GITHUB_TOKEN` を追加してください
-   >    - fine-grained PAT が必要 (`Copilot: Read` 権限スコープ、Copilot 有料シート保有アカウント)
-   >    - GitHub > Settings > Secrets and variables > Actions
+   >    - **fine-grained PAT** (`github_pat_` 始まり) が必要。classic PAT (`ghp_`) は silently 無視されます
+   >    - Resource owner: **個人アカウント** (組織所有 NG — `Copilot Requests` パーミッションが選べない)
+   >    - Account permissions → **`Copilot Requests`** (= Access/Read)
+   >    - アクティブな Copilot subscription (Free / Pro / Business / Enterprise いずれか) が必要
+   >    - 作成: https://github.com/settings/personal-access-tokens/new
+   >    - secret 設定: GitHub > Settings > Secrets and variables > Actions
    > 2. `/skill-eval:create-test` を実行してテストシナリオを作成
    > 3. PR を作成し、`/skill-eval` とコメントすると CI が起動します
    >
