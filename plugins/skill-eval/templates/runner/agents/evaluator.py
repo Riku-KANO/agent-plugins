@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import random
+import sys
 from pathlib import Path
 
 from copilot_runner import Runner
@@ -27,12 +28,32 @@ async def score(
     rng: random.Random | None = None,
 ) -> dict:
     """Returns {scores: {run_id: {success, completeness, ..., feedback,
-    arm, idx, error}}, mapping: {run_id: (arm, idx)}}."""
+    arm, idx, error}}, mapping: {run_id: (arm, idx)}}.
+
+    If the evaluator session returns empty/non-JSON content (e.g. because
+    Copilot's permission handler blocked an intermediate tool call and the
+    model bailed out without writing a final answer), we log the failure and
+    return empty per-run scores for this scenario so the orchestrator can
+    continue evaluating remaining scenarios instead of crashing the entire run.
+    """
     rng = rng or random.Random(0xC0FFEE)
     presented, mapping = _anonymize(runs, rng)
     prompt = _build_prompt(scenario, presented)
     raw = await runner.run(prompt)
-    parsed = _parse_json(raw)
+
+    parse_error = None
+    try:
+        parsed = _parse_json(raw)
+    except (json.JSONDecodeError, ValueError) as e:
+        parse_error = e
+        parsed = {"scores": {}}
+        print(
+            f"[evaluator] could not parse evaluator output for scenario "
+            f"{scenario.get('id','?')}: {type(e).__name__}: {e} | "
+            f"raw_len={len(raw)} raw_first200={raw[:200]!r}",
+            file=sys.stderr,
+            flush=True,
+        )
     scores = parsed.get("scores", {})
 
     out_scores: dict[str, dict] = {}
@@ -41,7 +62,9 @@ async def score(
         s["run_id"] = run_id
         s["arm"] = info["arm"]
         s["idx"] = info["idx"]
-        s["error"] = info.get("error")
+        s["error"] = info.get("error") or (
+            f"evaluator parse failed: {parse_error}" if parse_error else None
+        )
         out_scores[run_id] = s
     return {"scores": out_scores, "mapping": mapping}
 
