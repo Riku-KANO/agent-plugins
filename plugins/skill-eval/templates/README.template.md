@@ -14,12 +14,35 @@
 
 .skill-eval/
 ├── README.md                           # このファイル
+├── .version                            # インストール済みプラグイン版数 (自動管理)
 ├── scenario.schema.json                # scenarios.json の JSON スキーマ
 ├── scripts/                            # Python ランナー (CI が実行)
 └── reports/<skill>/*.md                # CI が書き戻すレポート
 
 .github/workflows/skill-eval.yml
 ```
+
+## プラグインのアップグレード
+
+新しいバージョンの skill-eval をインストールしたら、消費側リポジトリでも `/skill-eval:setup` を再実行してください。setup スクリプトは `.skill-eval/.version` で現在のインストール済みバージョンを記録しており、プラグイン側のバージョンと差分があれば「upgrade detected: 旧→新」と表示します。
+
+```bash
+/skill-eval:setup           # まず差分を検出 (上書きはせず exit 1)
+# 出力に upgrade detected: 0.1.0-alpha.1 → 0.1.0-alpha.2 等が表示される
+/skill-eval:setup --force   # 安全に移行
+```
+
+`--force` 時に消されるもの (= プラグイン管理の vendor ファイル):
+
+- `.skill-eval/scripts/` 配下の Python ランナー (古いファイルが残らないよう完全に再生成)
+- 旧バージョンのレガシーパス (例: 旧レイアウトの `skill-eval-scripts/`)
+- `.skill-eval/{README.md, scenario.schema.json}` (テンプレートで再生成)
+- `.github/workflows/skill-eval.yml` (テンプレートで再生成)
+
+`--force` でも **消されない** もの (= ユーザーデータ):
+
+- `.claude/skills/<skill>/skill-eval/scenarios.json` (シナリオ)
+- `.skill-eval/reports/<skill>/*.md` (CI が蓄積したレポート履歴)
 
 シナリオは検証対象の skill 自身のディレクトリに `skill-eval/scenarios.json` として置きます。skill 改修と同じ PR でシナリオも修正でき、レビューしやすくなります。
 

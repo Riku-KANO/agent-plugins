@@ -22,12 +22,14 @@ skill-eval プラグインのセットアップを実行する。これは消費
    node "${CLAUDE_PLUGIN_ROOT}/scripts/setup.mjs"
    ```
 
-   このスクリプトは既存ファイルを上書きしない。既に生成済みのファイルがある場合は警告を出して exit 1 する。
+   このスクリプトは既存ファイルを上書きしない。既に生成済みのファイル、または旧バージョンのレガシーパス (例: 旧レイアウトの `skill-eval-scripts/`) を検出した場合は警告を出して exit 1 する。
 
 3. exit 1 で停止した場合：
-   - 表示された衝突ファイルをユーザーに見せる
-   - `AskUserQuestion` で「上書きしますか?」と確認 (デフォルトは No)
+   - 出力に **「upgrade detected: <旧>→<新>」** が含まれていれば、これはプラグイン更新による移行ケース。`--force` で安全に再展開すべき (古いランナーを掃除して新しいファイル一式を入れる) 旨をユーザーに伝える
+   - そうでない (初回設定で既存ファイルがある) 場合も `--force` で上書きする選択肢を提示
+   - `AskUserQuestion` で「`--force` で再生成しますか?」と確認 (デフォルトは No)
    - "Yes" の場合のみ `node "${CLAUDE_PLUGIN_ROOT}/scripts/setup.mjs" --force` を実行
+   - **重要**: ユーザーが書いたデータ (`.claude/skills/<skill>/skill-eval/scenarios.json`, `.skill-eval/reports/`) は `--force` でも消されない旨をユーザーに伝えて安心させる
 
 4. 完了メッセージとして次の3ステップを表示する：
 
