@@ -2,7 +2,7 @@
 
 Run this from the workflow as:
 
-  python skill-eval-scripts/skill_eval.py \
+  python .skill-eval/scripts/skill_eval.py \
       --pr <num> --repo <owner/name> \
       --head-sha <sha> --base-sha <sha> \
       --pr-files pr-files.json \
