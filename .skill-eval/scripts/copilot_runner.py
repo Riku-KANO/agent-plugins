@@ -17,7 +17,9 @@ from __future__ import annotations
 import asyncio
 import os
 import shutil
+import sys
 import tempfile
+from collections import Counter
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
@@ -34,9 +36,15 @@ DEFAULT_TIMEOUT = 180.0
 
 # Permission kinds (per v0.3.0 PermissionRequest.kind enum):
 # "shell" | "write" | "read" | "mcp" | "custom-tool" | "url" | "memory" | "hook"
-# We approve only filesystem reads; everything else is denied so the evaluator
-# environment stays hermetic.
-APPROVED_KINDS = {"read"}
+#
+# We approve filesystem reads AND the model's own internal custom-tool calls.
+# Blocking custom-tool causes Claude to emit no final AssistantMessageData
+# after a denied tool request — the session goes idle with empty transcripts,
+# which then crashes downstream JSON parsing in the evaluator.
+#
+# Higher-risk kinds (shell, write, mcp, url, memory, hook) stay denied so the
+# evaluator environment remains hermetic.
+APPROVED_KINDS = {"read", "custom-tool"}
 
 
 def restrictive_permission_handler(request, invocation):
@@ -88,17 +96,31 @@ class Runner:
         async with await self.client.create_session(**kwargs) as session:
             done = asyncio.Event()
             collected: list[str] = []
+            seen_event_types: list[str] = []
 
             def on_event(event):
                 data = getattr(event, "data", event)
+                seen_event_types.append(type(data).__name__)
                 if isinstance(data, AssistantMessageData):
-                    text = getattr(data, "content", None) or getattr(data, "text", "")
-                    if text:
-                        collected.append(text)
+                    if data.content:
+                        collected.append(data.content)
                 elif isinstance(data, SessionIdleData):
                     done.set()
 
             session.on(on_event)
             await session.send(prompt)
             await asyncio.wait_for(done.wait(), timeout=timeout)
-            return "".join(collected).strip()
+            result = "".join(collected).strip()
+
+            if not result:
+                # Diagnostic so empty-transcript bugs are debuggable from CI logs.
+                # Most common cause: a permission kind was denied and the model
+                # gave up without emitting a final AssistantMessageData.
+                event_counts = dict(Counter(seen_event_types))
+                print(
+                    f"[copilot_runner] empty response from session "
+                    f"(model={self.model}, events={event_counts})",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            return result
