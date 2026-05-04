@@ -7,7 +7,7 @@ allowed-tools: [Read, Write, Glob, Bash, AskUserQuestion]
 skill-eval プラグインのセットアップを実行する。これは消費側リポジトリに以下を展開するワンショット作業：
 
 1. `.github/workflows/skill-eval.yml` — `/skill-eval` PR コメントで起動するワークフロー
-2. `skill-eval-scripts/` — Python ランナー一式 (Copilot SDK ベース)
+2. `.skill-eval/scripts/` — Python ランナー一式 (Copilot SDK ベース)
 3. `.skill-eval/scenarios/` — シナリオ JSON を置くディレクトリ (空)
 4. `.skill-eval/scenario.schema.json` — シナリオの JSON スキーマ
 5. `.skill-eval/README.md` — 消費側向け運用ガイド

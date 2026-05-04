@@ -15,9 +15,9 @@
 .skill-eval/
 ├── README.md                           # このファイル
 ├── scenario.schema.json                # scenarios.json の JSON スキーマ
+├── scripts/                            # Python ランナー (CI が実行)
 └── reports/<skill>/*.md                # CI が書き戻すレポート
 
-skill-eval-scripts/                     # Python ランナー (CI が実行)
 .github/workflows/skill-eval.yml
 ```
 
@@ -121,6 +121,6 @@ skill を変更する PR を作成し、PR コメントに `/skill-eval` と書�
 
 ## 既知の制限
 
-- **Copilot SDK は public preview** (v0.3.0)。SDK 破壊変更時は `skill-eval-scripts/copilot_runner.py` の更新が必要
+- **Copilot SDK は public preview** (v0.3.0)。SDK 破壊変更時は `.skill-eval/scripts/copilot_runner.py` の更新が必要
 - **シナリオはユーザー作成**。skill 改修時にシナリオも更新しないと検証品質が落ちます
 - 実装は alpha (`0.1.0-alpha.1`)。フィードバック・バグ報告は marketplace 元 (`personal-agents`) のリポジトリへ

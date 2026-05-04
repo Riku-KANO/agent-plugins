@@ -59,13 +59,13 @@ function planCopies() {
     dst: join(PROJECT_ROOT, ".github", "workflows", "skill-eval.yml"),
   });
 
-  // 2. Runner tree -> skill-eval-scripts/
+  // 2. Runner tree -> .skill-eval/scripts/
   const runnerDir = join(TEMPLATES, "runner");
   for (const file of listFilesRecursive(runnerDir)) {
     const rel = relative(runnerDir, file);
     copies.push({
       src: file,
-      dst: join(PROJECT_ROOT, "skill-eval-scripts", rel),
+      dst: join(PROJECT_ROOT, ".skill-eval", "scripts", rel),
     });
   }
 
@@ -129,7 +129,7 @@ function main() {
 
   log(`✓ skill-eval set up in ${PROJECT_ROOT}`);
   log(`  - .github/workflows/skill-eval.yml`);
-  log(`  - skill-eval-scripts/ (Python runner)`);
+  log(`  - .skill-eval/scripts/ (Python runner)`);
   log(`  - .skill-eval/scenario.schema.json + README.md`);
   log(`  - .skill-eval/reports/ (empty — populated by CI)`);
   log(``);

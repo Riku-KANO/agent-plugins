@@ -3,9 +3,9 @@ name: skill-eval
 # Trigger: a maintainer comments `/skill-eval` on a PR.
 #
 # Security model:
-#   - This workflow runs the *default branch* version of skill-eval-scripts/.
+#   - This workflow runs the *default branch* version of .skill-eval/scripts/.
 #     The PR head is consumed only as data (file contents fetched via `gh api`),
-#     never executed. Modifying skill-eval-scripts/ in a PR cannot affect this run.
+#     never executed. Modifying .skill-eval/scripts/ in a PR cannot affect this run.
 #   - `permissions: contents: write` is required to commit reports back to the
 #     PR branch. That is safe because no PR-controlled code runs in this job.
 on:
@@ -83,7 +83,7 @@ jobs:
 
       - name: Install Python dependencies
         if: steps.cmd.outputs.matched == 'true'
-        run: pip install -r skill-eval-scripts/requirements.txt
+        run: pip install -r .skill-eval/scripts/requirements.txt
 
       - name: Resolve PR metadata
         id: pr
@@ -157,7 +157,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p "$OUT_DIR/reports"
-          python skill-eval-scripts/skill_eval.py \
+          python .skill-eval/scripts/skill_eval.py \
             --pr "${{ github.event.issue.number }}" \
             --repo "${{ github.repository }}" \
             --head-sha "${{ steps.pr.outputs.head_sha }}" \

@@ -68,7 +68,7 @@ plugins/skill-eval/
     ├── workflow.yml.template       # → .github/workflows/skill-eval.yml
     ├── scenario.schema.json        # シナリオ JSON Schema
     ├── README.template.md          # → .skill-eval/README.md
-    └── runner/                     # → skill-eval-scripts/
+    └── runner/                     # → .skill-eval/scripts/
         ├── requirements.txt
         ├── skill_eval.py           # オーケストレーター
         ├── copilot_runner.py       # SDK ラッパー
