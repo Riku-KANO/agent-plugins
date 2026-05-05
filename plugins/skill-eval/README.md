@@ -1,6 +1,6 @@
 # skill-eval (alpha)
 
-> **Status**: `0.1.0-alpha.1` — まだ完成度が低い PoC 段階です。SDK の破壊変更や評価ロジックの調整が今後入ります。
+> **Status**: `0.1.0-alpha.3` — まだ完成度が低い PoC 段階です。SDK の破壊変更や評価ロジックの調整が今後入ります。
 
 `.claude/skills/<name>/SKILL.md` の効果を CI 上で A/B 検証するための Claude Code プラグイン。GitHub Copilot SDK (Python `github-copilot-sdk==0.3.0`) を LLM-as-judge として使用し、treatment (PR head 版) と control (base 版) を匿名比較して **改善 ✅ / 退行 ❌ / 同等 ➖** を判定します。
 
@@ -37,8 +37,11 @@ git commit && git push             # PR を作成
 
 ## 保存場所
 
-- **シナリオ**: `.claude/skills/<skill>/skill-eval/scenarios.json` — 検証対象の skill ディレクトリに co-locate
-- **レポート**: `.skill-eval/reports/<skill>/*.md` — CI が書き戻す履歴 (リポジトリルート集約)
+シナリオ・レポートとも検証対象 skill のディレクトリに co-locate されます。SKILL.md とテスト仕様・実測レポートを同じ場所にまとめることで、品質チェックの証跡として PR レビュー時に直接参照できます。
+
+- **シナリオ**: `.claude/skills/<skill>/skill-eval/scenarios.json` (人手で作成)
+- **レポート**: `.claude/skills/<skill>/skill-eval/reports/YYYY-MM-DD_PR<n>_<sha>.md` (CI が書き戻す)
+- **履歴サマリ**: `.claude/skills/<skill>/skill-eval/reports/index.md` (CI が再生成)
 
 ## 何ができないか (alpha 制限)
 

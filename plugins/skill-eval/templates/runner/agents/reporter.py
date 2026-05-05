@@ -439,7 +439,7 @@ def _truncate_to_budget(md: str) -> str:
     if len(md.encode("utf-8")) <= SUMMARY_BYTE_BUDGET:
         return md
     truncated = md.encode("utf-8")[:SUMMARY_BYTE_BUDGET].decode("utf-8", errors="ignore")
-    return truncated + "\n\n_…バイト上限のため切り詰めました。詳細は `.skill-eval/reports/` の永続レポートを参照してください。_"
+    return truncated + "\n\n_…バイト上限のため切り詰めました。詳細は `.claude/skills/<skill>/skill-eval/reports/` の永続レポートを参照してください。_"
 
 
 def _signed(x: float) -> str:

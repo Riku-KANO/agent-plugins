@@ -13,8 +13,12 @@ The orchestrator runs in the default-branch checkout (trusted code only). The
 PR head is consumed only as data via gh API in `pr_data`.
 
 Scenarios are user-authored ahead of time via `/skill-eval:create-test` and
-loaded from `.skill-eval/scenarios/<skill>.json`. Skills without scenarios
-are surfaced in the PR comment and skipped (no silent passes).
+loaded from `.claude/skills/<skill>/skill-eval/scenarios.json`. Skills without
+scenarios are surfaced in the PR comment and skipped (no silent passes).
+
+Final report destination on the PR branch (written by the workflow after the
+orchestrator finishes):
+  .claude/skills/<skill>/skill-eval/reports/<file>.md
 """
 
 from __future__ import annotations
@@ -51,8 +55,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--pr-files", required=True,
                    help="JSON file produced by `gh api --paginate --slurp`")
     p.add_argument("--reports-dir", required=True,
-                   help="where full reports are written; the workflow copies "
-                        "this to .skill-eval/reports/ after switching to PR head")
+                   help="staging dir under which `<skill>/<file>.md` is written. "
+                        "The workflow copies each subtree to "
+                        ".claude/skills/<skill>/skill-eval/reports/ after "
+                        "switching to the PR head.")
     p.add_argument("--pr-comment-out", required=True,
                    help="markdown file that will be posted as the PR comment")
     p.add_argument("--samples-per-arm", type=int, default=3)

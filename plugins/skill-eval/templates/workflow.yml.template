@@ -201,25 +201,54 @@ jobs:
 
       - name: Persist reports to PR branch
         id: persist
+        # Note: do not gate on `hashFiles(.../reports/**)`. That pattern is
+        # unreliable in `if:` (observed empty hash even when files existed,
+        # silently skipping the step). The script below checks for reports
+        # itself and exits cleanly when none are present.
         if: |
           steps.cmd.outputs.matched == 'true' &&
-          steps.pr.outputs.is_fork != 'true' &&
-          hashFiles(format('{0}/reports/**', env.OUT_DIR)) != ''
+          steps.pr.outputs.is_fork != 'true'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_REF: ${{ steps.pr.outputs.head_ref }}
           PR: ${{ github.event.issue.number }}
         run: |
+          set -e
+          if [ ! -d "$OUT_DIR/reports" ] || [ -z "$(ls -A "$OUT_DIR/reports" 2>/dev/null)" ]; then
+            echo "no reports to persist (orchestrator produced none)"
+            exit 0
+          fi
+
+          # Stage outside the repo so checkout doesn't clobber it.
           STAGE=$(mktemp -d)
           cp -r "$OUT_DIR/reports/." "$STAGE/"
+
+          # Stash the trusted (default-branch) persist_report.py so we can
+          # run it AFTER the PR-head checkout without executing PR-controlled
+          # Python. The PR head may have modified .skill-eval/scripts/.
+          TRUSTED_PR=$(mktemp -d)
+          cp .skill-eval/scripts/persist_report.py "$TRUSTED_PR/"
+
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin "$HEAD_REF":pr-head
           git checkout pr-head
-          mkdir -p .skill-eval/reports
-          cp -r "$STAGE/." .skill-eval/reports/
-          git add .skill-eval/reports/
+
+          # Place each skill's reports next to its SKILL.md so they serve as
+          # quality-check evidence — then rebuild index.md against the FINAL
+          # dir (which now has both the new report and prior PR history).
+          for src in "$STAGE"/*/; do
+            [ -d "$src" ] || continue
+            skill=$(basename "$src")
+            dst=".claude/skills/$skill/skill-eval/reports"
+            mkdir -p "$dst"
+            cp "$src"*.md "$dst/"
+            # Run the trusted (default-branch) script, NOT the PR-head copy.
+            python "$TRUSTED_PR/persist_report.py" rebuild-index "$dst" --skill "$skill"
+            git add "$dst"
+          done
+
           if git diff --cached --quiet; then
             echo "no changes to commit"
             exit 0
