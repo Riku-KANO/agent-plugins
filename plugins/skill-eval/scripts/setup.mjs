@@ -40,6 +40,18 @@ const LEGACY_PATHS = [
   "skill-eval-scripts",  // pre-alpha.2: runner was at <root>/skill-eval-scripts/
 ];
 
+// User-authored data from older plugin versions that needs MIGRATION rather
+// than removal. We never delete these paths automatically — even with --force
+// — because they represent quality-check history. We just warn so the user
+// can `git mv` to the new layout themselves.
+const LEGACY_USER_DATA = [
+  {
+    path: ".skill-eval/reports",
+    new_layout: ".claude/skills/<skill>/skill-eval/reports/",
+    note: "alpha.2 以前のレポート集約場所。新版では skill ディレクトリ配下に co-locate します。",
+  },
+];
+
 const VERSION_FILE_REL = ".skill-eval/.version";
 
 function log(msg) {
@@ -128,16 +140,22 @@ function detectLegacyPaths() {
     .filter((x) => existsSync(x.abs));
 }
 
+function detectLegacyUserData() {
+  return LEGACY_USER_DATA
+    .map((d) => ({ ...d, abs: join(PROJECT_ROOT, d.path) }))
+    .filter((d) => {
+      try {
+        return readdirSync(d.abs).some((e) => e !== ".gitkeep");
+      } catch {
+        return false;
+      }
+    });
+}
+
 function copyFile(src, dst) {
   mkdirSync(dirname(dst), { recursive: true });
   const data = readFileSync(src);
   writeFileSync(dst, data);
-}
-
-function ensureGitkeep(dir) {
-  mkdirSync(dir, { recursive: true });
-  const keep = join(dir, ".gitkeep");
-  if (!existsSync(keep)) writeFileSync(keep, "");
 }
 
 function rmDir(p) {
@@ -158,6 +176,7 @@ function main() {
   const isUpgrade = installedVersion && installedVersion !== currentVersion;
   const isFreshInstall = installedVersion === null;
   const legacy = detectLegacyPaths();
+  const legacyData = detectLegacyUserData();
 
   if (isUpgrade) {
     log(`↑ skill-eval upgrade detected: ${installedVersion} → ${currentVersion}`);
@@ -169,6 +188,13 @@ function main() {
   if (legacy.length) {
     log(`⚠️  Legacy path(s) from older layout detected:`);
     for (const x of legacy) log(`     - ${x.rel}/`);
+  }
+  if (legacyData.length) {
+    log(`⚠️  Legacy user-data path(s) — will NOT be touched, manual migration recommended:`);
+    for (const d of legacyData) {
+      log(`     - ${d.path}/  →  ${d.new_layout}`);
+      log(`       ${d.note}`);
+    }
   }
 
   const copies = planCopies();
@@ -192,7 +218,9 @@ function main() {
       err(`    - wipes .skill-eval/scripts/ before re-vendoring (drops stale runner files)`);
       err(`    - rewrites vendored files (workflow, schema, README)`);
       err(`  User-authored data (.claude/skills/<skill>/skill-eval/scenarios.json,`);
-      err(`  .skill-eval/reports/) is NEVER touched.`);
+      err(`  .claude/skills/<skill>/skill-eval/reports/, .skill-eval/reports/) is`);
+      err(`  NEVER touched — old reports under .skill-eval/reports/ should be`);
+      err(`  migrated manually with \`git mv\` to the new co-located layout.`);
     } else {
       err(`  Re-run with --force to overwrite, or remove these files first.`);
     }
@@ -219,9 +247,6 @@ function main() {
     copyFile(c.src, c.dst);
   }
 
-  // Empty reports directory with .gitkeep (the workflow writes here)
-  ensureGitkeep(join(PROJECT_ROOT, ".skill-eval", "reports"));
-
   // Record the version we just installed so future runs can detect upgrades.
   writeInstalledVersion(currentVersion);
 
@@ -230,11 +255,12 @@ function main() {
   log(`  - .skill-eval/scripts/ (Python runner)`);
   log(`  - .skill-eval/scenario.schema.json + README.md`);
   log(`  - .skill-eval/.version (= ${currentVersion})`);
-  log(`  - .skill-eval/reports/ (empty — populated by CI)`);
   log(``);
-  log(`Scenarios live at .claude/skills/<skill>/skill-eval/scenarios.json`);
-  log(`(co-located with each SKILL.md). Run /skill-eval:create-test to author them.`);
+  log(`Per-skill data lives co-located with each SKILL.md:`);
+  log(`  - .claude/skills/<skill>/skill-eval/scenarios.json (you author this)`);
+  log(`  - .claude/skills/<skill>/skill-eval/reports/      (CI writes here)`);
   log(``);
+  log(`Run /skill-eval:create-test to author scenarios.`);
   log(`Next: add COPILOT_GITHUB_TOKEN secret, then /skill-eval:create-test.`);
 }
 

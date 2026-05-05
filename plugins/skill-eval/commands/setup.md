@@ -8,9 +8,11 @@ skill-eval プラグインのセットアップを実行する。これは消費
 
 1. `.github/workflows/skill-eval.yml` — `/skill-eval` PR コメントで起動するワークフロー
 2. `.skill-eval/scripts/` — Python ランナー一式 (Copilot SDK ベース)
-3. `.skill-eval/scenarios/` — シナリオ JSON を置くディレクトリ (空)
-4. `.skill-eval/scenario.schema.json` — シナリオの JSON スキーマ
-5. `.skill-eval/README.md` — 消費側向け運用ガイド
+3. `.skill-eval/scenario.schema.json` — シナリオの JSON スキーマ
+4. `.skill-eval/README.md` — 消費側向け運用ガイド
+5. `.skill-eval/.version` — インストール済みプラグイン版 (アップグレード差分検出用)
+
+シナリオとレポートはどちらも `.claude/skills/<skill>/skill-eval/` 配下に co-locate されるため、setup ではそれらのディレクトリは作成しない (skill ごとに `/skill-eval:create-test` または CI 実行時に作成される)。
 
 ## 手順
 
@@ -27,9 +29,10 @@ skill-eval プラグインのセットアップを実行する。これは消費
 3. exit 1 で停止した場合：
    - 出力に **「upgrade detected: <旧>→<新>」** が含まれていれば、これはプラグイン更新による移行ケース。`--force` で安全に再展開すべき (古いランナーを掃除して新しいファイル一式を入れる) 旨をユーザーに伝える
    - そうでない (初回設定で既存ファイルがある) 場合も `--force` で上書きする選択肢を提示
+   - 出力に **「Legacy user-data path(s)」** の警告がある場合は、`--force` でも触らない旨を強調 (alpha.2 の `.skill-eval/reports/` が該当)。手動で `git mv` する手順は `.skill-eval/README.md` の「alpha.2 → alpha.3 のレポート移行」セクションを参照
    - `AskUserQuestion` で「`--force` で再生成しますか?」と確認 (デフォルトは No)
    - "Yes" の場合のみ `node "${CLAUDE_PLUGIN_ROOT}/scripts/setup.mjs" --force` を実行
-   - **重要**: ユーザーが書いたデータ (`.claude/skills/<skill>/skill-eval/scenarios.json`, `.skill-eval/reports/`) は `--force` でも消されない旨をユーザーに伝えて安心させる
+   - **重要**: ユーザーが書いたデータ (`.claude/skills/<skill>/skill-eval/scenarios.json`, `.claude/skills/<skill>/skill-eval/reports/`, `.skill-eval/reports/`) は `--force` でも消されない旨をユーザーに伝えて安心させる
 
 4. 完了メッセージとして次の3ステップを表示する：
 

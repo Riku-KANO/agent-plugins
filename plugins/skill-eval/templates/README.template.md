@@ -10,17 +10,21 @@
 .claude/skills/<skill>/
 ├── SKILL.md                            # 検証対象
 └── skill-eval/
-    └── scenarios.json                  # この skill のテストシナリオ (co-located)
+    ├── scenarios.json                  # この skill のテストシナリオ (人手で作成)
+    └── reports/                        # CI が書き戻すレポート (品質チェック証跡)
+        ├── index.md                    # 履歴サマリ
+        └── YYYY-MM-DD_PR<n>_<sha>.md   # 1 PR 1ファイル
 
 .skill-eval/
 ├── README.md                           # このファイル
 ├── .version                            # インストール済みプラグイン版数 (自動管理)
 ├── scenario.schema.json                # scenarios.json の JSON スキーマ
-├── scripts/                            # Python ランナー (CI が実行)
-└── reports/<skill>/*.md                # CI が書き戻すレポート
+└── scripts/                            # Python ランナー (CI が実行)
 
 .github/workflows/skill-eval.yml
 ```
+
+シナリオもレポートも `.claude/skills/<skill>/skill-eval/` 配下に co-locate します。skill 本体・テスト仕様・実測レポートが同じ場所にあるので、**SKILL.md のレビュー時にレポートを根拠として参照** でき、品質チェックの証跡として残ります。
 
 ## プラグインのアップグレード
 
@@ -42,9 +46,25 @@
 `--force` でも **消されない** もの (= ユーザーデータ):
 
 - `.claude/skills/<skill>/skill-eval/scenarios.json` (シナリオ)
-- `.skill-eval/reports/<skill>/*.md` (CI が蓄積したレポート履歴)
+- `.claude/skills/<skill>/skill-eval/reports/*.md` (CI が蓄積したレポート履歴)
+- `.skill-eval/reports/` (alpha.2 以前のレガシー集約場所。残っていても触りません — `git mv` で skill ディレクトリ配下に移してください)
 
-シナリオは検証対象の skill 自身のディレクトリに `skill-eval/scenarios.json` として置きます。skill 改修と同じ PR でシナリオも修正でき、レビューしやすくなります。
+シナリオもレポートも検証対象の skill 自身のディレクトリ (`.claude/skills/<skill>/skill-eval/`) に co-locate されます。skill 改修と同じ PR でシナリオも修正でき、PR レビュー時に過去レポートも一緒に参照できます。
+
+### alpha.2 → alpha.3 のレポート移行
+
+旧版で `.skill-eval/reports/<skill>/*.md` に蓄積したレポートを新レイアウトへ移すには：
+
+```bash
+for d in .skill-eval/reports/*/; do
+  skill=$(basename "$d")
+  mkdir -p ".claude/skills/$skill/skill-eval/reports"
+  git mv "$d"* ".claude/skills/$skill/skill-eval/reports/"
+done
+rmdir .skill-eval/reports/* 2>/dev/null || true
+rmdir .skill-eval/reports 2>/dev/null || true
+git commit -m "skill-eval: migrate reports to .claude/skills/<skill>/skill-eval/reports/"
+```
 
 ## 初回セットアップ
 
@@ -92,7 +112,8 @@ skill の仕様変更で期待挙動が変わったときは、
 skill を変更する PR を作成し、PR コメントに `/skill-eval` と書くと CI が起動します (10分前後)。完了すると：
 
 - PR コメントに **改善 ✅ / 退行 ❌ / 同等 ➖** の判定 + 4 軸スコアテーブルが投稿される
-- `.skill-eval/reports/<skill>/` に詳細レポート (transcript 抜粋付き) が追加コミットされる
+- `.claude/skills/<skill>/skill-eval/reports/` に詳細レポート (transcript 抜粋付き) が追加コミットされる
+- 同ディレクトリの `index.md` が更新され、PR 横断の履歴サマリが残る
 
 ## モード別の挙動
 
@@ -148,11 +169,12 @@ skill を変更する PR を作成し、PR コメントに `/skill-eval` と書�
 | `user_weekly_rate_limited` | quota 復活待ち、または別アカウントの PAT に切り替え |
 | `Commenter @... lacks write permission` | リポジトリの write 以上の権限が必要 |
 | シナリオ未作成スキップ | `/skill-eval:create-test <skill>` で `.claude/skills/<skill>/skill-eval/scenarios.json` を作る |
-| fork PR でレポートが追加されない | 仕様 (fork に push できないため、PR コメントのみ投稿) |
+| fork PR でレポートが追加されない | 仕様 (fork に push できないため、PR コメントのみ投稿)。アーティファクト (`skill-eval-pr<n>`) からダウンロード可 |
+| Persist ステップが skipped で終わる | alpha.2 のバグ。alpha.3 で `hashFiles` 依存を削除して常時実行に変更したので、`/skill-eval:setup --force` で再展開すること |
 | 判定が毎回揺らぐ | LLM-as-judge は確率的。ブロッキングではなく参考情報として運用すること |
 
 ## 既知の制限
 
 - **Copilot SDK は public preview** (v0.3.0)。SDK 破壊変更時は `.skill-eval/scripts/copilot_runner.py` の更新が必要
 - **シナリオはユーザー作成**。skill 改修時にシナリオも更新しないと検証品質が落ちます
-- 実装は alpha (`0.1.0-alpha.1`)。フィードバック・バグ報告は marketplace 元 (`personal-agents`) のリポジトリへ
+- 実装は alpha (`0.1.0-alpha.3`)。フィードバック・バグ報告は marketplace 元 (`personal-agents`) のリポジトリへ
