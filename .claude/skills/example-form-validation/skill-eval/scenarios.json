@@ -1,0 +1,63 @@
+{
+  "skill": "example-form-validation",
+  "skill_path": ".claude/skills/example-form-validation/SKILL.md",
+  "created_via": "manual",
+  "scenarios": [
+    {
+      "id": "s1",
+      "archetype": "direct",
+      "expectation": "should_fire",
+      "user_prompt": "React でサインアップフォームを実装したい。メール・パスワード・パスワード確認の3項目で、メールは形式チェック、パスワードは8文字以上、確認との一致もチェックしてほしい。",
+      "success_criteria": [
+        "`react-hook-form` を import している",
+        "`zod` でスキーマを定義している (`z.object({...})` が登場する)",
+        "`zodResolver` を `useForm` の resolver に渡している",
+        "`z.infer<typeof schema>` (または同等) で型を導出している (型を手書きしていない)",
+        "メール形式・パスワード長・パスワード一致のいずれもスキーマ側でバリデーションしている",
+        "`handleSubmit(onSubmit)` を `<form onSubmit={...}>` に渡している",
+        "エラー表示が含まれる (`errors.email` 等)"
+      ],
+      "skill_relevance": "複数フィールド+バリデーションが必要なフォームという skill の中核ユースケース。スキーマ→型推論→useForm→onSubmit の固定順で書けているかを検証する。"
+    },
+    {
+      "id": "s2",
+      "archetype": "adjacent",
+      "expectation": "should_fire",
+      "user_prompt": "問い合わせフォームを React で作って。名前、メールアドレス、お問い合わせ内容(本文)の3つで、メールアドレスだけ必須、本文は10文字以上にしたい。",
+      "success_criteria": [
+        "`react-hook-form` + `zod` の組み合わせを提案している",
+        "`zodResolver` で resolver を渡している",
+        "メアドの必須/形式と本文10文字以上を zod スキーマで表現している",
+        "名前は optional (`z.string().optional()` または `.nullish()`) として扱っている",
+        "型が `z.infer` で導出されている",
+        "`handleSubmit` 経由で submit ハンドラが繋がっている"
+      ],
+      "skill_relevance": "シンプルな複数フィールドフォーム。必須/任意の使い分けと本文の最低長など、現実的なバリデーション条件を skill が正しく zod に落とし込めるかを検証する。"
+    },
+    {
+      "id": "s3",
+      "archetype": "subtle",
+      "expectation": "should_not_fire",
+      "user_prompt": "React でメールアドレス入力欄だけの最小例を見せて。バリデーションは要らないから `<input type=\"email\" />` だけでいい。",
+      "success_criteria": [
+        "`react-hook-form` や `zod` を持ち出していない",
+        "`<input type=\"email\" />` を含む最小スニペットで応答している",
+        "ライブラリ追加の提案や `useForm` の使用を勧めていない",
+        "依頼通り単一の input 例に留まっている"
+      ],
+      "skill_relevance": "明示的に「最小例で」「バリデーション不要」と言われている近接ケース。skill がライブラリ導入を押し付けず、ユーザーの最小要求に従えるかを検証する暴発抑止。"
+    },
+    {
+      "id": "s4",
+      "archetype": "adjacent",
+      "expectation": "should_not_fire",
+      "user_prompt": "Formik でログインフォームを作って。メールとパスワードの2項目です。",
+      "success_criteria": [
+        "`Formik` を使ったコード例を示している",
+        "`react-hook-form` や `zod` への乗り換えを勧めていない (補足として代替案を1行触れる程度は許容)",
+        "ユーザー指定のライブラリ (`Formik`) で完結したコードになっている"
+      ],
+      "skill_relevance": "ユーザーが別ライブラリ (`Formik`) を明示している場合は、skill が自分のテンプレートを押し付けてはいけない。ライブラリ選択の尊重を検証する暴発抑止。"
+    }
+  ]
+}
