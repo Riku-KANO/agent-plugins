@@ -23,6 +23,12 @@
       "description": "[alpha] /skill-eval — Claude Code skill の効果を Copilot SDK で A/B 検証する CI を生成する。",
       "source": "./plugins/skill-eval",
       "category": "development"
+    },
+    {
+      "name": "api-design",
+      "description": "[alpha] API設計の原則とベストプラクティスで Claude をガイドする。REST/GraphQL/gRPC/ストリーミング、新規設計・レビュー・バージョニングを横断。",
+      "source": "./plugins/api-design",
+      "category": "development"
     }
   ]
 }

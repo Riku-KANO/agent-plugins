@@ -1,0 +1,6 @@
+{
+  "name": "api-design",
+  "version": "0.1.0-alpha.1",
+  "description": "API設計の原則とベストプラクティスに沿って、新規設計・レビュー・バージョニング相談を導くスキル。REST/GraphQL/gRPC/ストリーミングを横断的にカバー。",
+  "author": { "name": "Riku-KANO" }
+}
