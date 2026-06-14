@@ -14,13 +14,13 @@
     },
     {
       "name": "ideate",
-      "description": "/ideate — Plan前の要件定義を対話で引き出してドキュメント化する。",
+      "description": "/ideate - Plan前の要件定義を対話で引き出してドキュメント化する。",
       "source": "./plugins/ideate",
       "category": "productivity"
     },
     {
       "name": "skill-eval",
-      "description": "[alpha] /skill-eval — Claude Code skill の効果を Copilot SDK で A/B 検証する CI を生成する。",
+      "description": "[alpha] /skill-eval - Claude Code skill の効果を Copilot SDK で A/B 検証する CI を生成する。",
       "source": "./plugins/skill-eval",
       "category": "development"
     },
@@ -29,6 +29,12 @@
       "description": "[alpha] API設計の原則とベストプラクティスで Claude をガイドする。REST/GraphQL/gRPC/ストリーミング、新規設計・レビュー・バージョニングを横断。",
       "source": "./plugins/api-design",
       "category": "development"
+    },
+    {
+      "name": "xquik-social-automation",
+      "description": "Guide Xquik REST API and MCP workflows for X data, extraction, monitors, webhooks, and confirmation-gated publishing.",
+      "source": "./plugins/xquik-social-automation",
+      "category": "productivity"
     }
   ]
 }
