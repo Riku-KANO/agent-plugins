@@ -19,7 +19,8 @@ After updating this repository, refresh consumers with:
 
 | Name | Description |
 | --- | --- |
-| [`hello-world`](plugins/hello-world) | Reference plugin — `/hello` slash command and a sample skill. Use as a template. |
+| [`hello-world`](plugins/hello-world) | Reference plugin - `/hello` slash command and a sample skill. Use as a template. |
+| [`xquik-social-automation`](plugins/xquik-social-automation) | Xquik workflow guidance for X data, extraction, monitors, webhooks, MCP, and confirmation-gated publishing. |
 
 ## Add a new plugin
 

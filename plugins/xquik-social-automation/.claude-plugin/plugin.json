@@ -1,0 +1,8 @@
+{
+  "name": "xquik-social-automation",
+  "version": "0.1.0",
+  "description": "Guide Xquik REST API and MCP workflows for X data, extraction, monitors, webhooks, and confirmation-gated publishing.",
+  "author": {
+    "name": "Xquik"
+  }
+}
